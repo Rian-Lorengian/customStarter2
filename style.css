@@ -1,0 +1,211 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    color: #fff;
+    font-family: "Inter", serif;
+    caret-color: transparent;
+}
+
+.main {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    display: flex; /* Mantém o conteúdo organizado */
+    align-items: center;
+    justify-content: center;
+    color: white; /* Deixa o texto visível */
+}
+
+.main::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7); /* Escurece o fundo */
+    backdrop-filter: blur(5px);
+    z-index: 1; /* Mantém o overlay atrás do conteúdo */
+}
+
+.container {
+    display: block;
+    height: 80%;
+    max-height: 80%;
+    width: 40%;
+    position: relative; /* Faz o conteúdo ficar acima do overlay */
+    z-index: 2;
+}
+
+.upper {
+    height: 25%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mid {
+    /* border: 1px solid blue; */
+    height: 50%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.low {
+    height: 25%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+#hora {
+    font-family: "Inter", serif;
+    font-optical-sizing: auto;
+    font-weight: 100;
+    font-style: normal;
+    font-size: 3em;
+    text-align: center;
+    padding: 0;
+}
+
+#dia {
+    font-family: "Inter", serif;
+    font-optical-sizing: auto;
+    font-weight: 100;
+    font-style: normal;
+    font-size: 0.75em;
+    text-align: center;
+}
+
+.salute {
+    font-family: "Inter", serif;
+    font-optical-sizing: auto;
+    font-weight: 200;
+    font-style: normal;
+    font-size: 2em;
+    text-align: center;
+    padding: 0;
+}
+
+.clima {
+    font-family: "Inter", serif;
+    font-optical-sizing: auto;
+    font-weight: 100;
+    font-style: normal;
+    font-size: 1em;
+    text-align: center;
+    padding: 0;
+}
+
+.icone {
+    text-align: center;
+    height: 50px;
+}
+
+.mid-1 {
+    display: flex;
+    flex-direction: column; /* Organiza os elementos em coluna */
+    align-items: center; /* Centraliza horizontalmente */
+    justify-content: center; /* Centraliza verticalmente */
+    text-align: center; /* Para alinhar textos */
+}
+
+.icone-temp {
+    display: flex;
+    align-items: center; /* Alinha verticalmente */
+}
+
+.temp {
+    font-family: "Inter", serif;
+    font-optical-sizing: auto;
+    font-weight: 150;
+    font-style: normal;
+    font-size: 1.25em;
+    text-align: center;
+    padding: 0;
+}
+
+/* Estiliza o fundo do loader */
+#loading {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: #ffffff; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* Animação de spinner */
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #7214be;
+    border-top: 5px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Animação do Spinner */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#feriado {
+    font-family: "Inter", serif;
+    font-optical-sizing: auto;
+    font-weight: 200;
+    font-style: normal;
+    font-size: 1.25em;
+    text-align: center;
+}
+
+.list-atalhos {
+   margin: 1%;
+}
+
+.list-atalhos-img {
+    height: 50px;
+    width: 50px;
+    border-radius: 15px;
+}
+
+.progress-container {
+    width: 50%;
+    position: relative;
+    margin: 10px 0;
+}
+.progress-bar {
+    height: 2px;
+    background-color: white;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 25%;
+    transition: width 0.5s ease-in-out;
+}
+.progress-text {
+    text-align: center;
+    font-size: 12px;
+    margin-bottom: 25px;
+}
+
+#barra_hora, #barra_dia {
+    cursor: pointer;
+}
