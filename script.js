@@ -27,10 +27,13 @@ function formatarData(dia_da_semana, dia_do_mes, mes, ano) {
     return `${dia_da_semana}, ${dia_do_mes} de ${mes} de ${ano}`
 }
 
+function formatarTemperatura(temperatura) {
+    return Math.round(temperatura) + 'ºC' 
+}
+
 function formatarClima(temperatura_atual, descricao_atual, descricao_futura) {
     const descricao = capitalizarPrimeiraLetra(descricao_atual)
-    const temperatura =  Math.round(temperatura_atual)
-    console.log(temperatura)
+    const temperatura =  formatarTemperatura(temperatura_atual)
 
     let ocorrencia = 'será de'
     const ocorrenciasEspeciais = ['nublado']
@@ -43,7 +46,64 @@ function formatarClima(temperatura_atual, descricao_atual, descricao_futura) {
         ocorrencia = ocorrencia === 'estará' ? 'permanecerá' : 'permanecerá com';
     }
 
-    return `${descricao}. Atualmente faz ${temperatura}ºC <br> Para as próximas horas, o clima ${ocorrencia} ${descricao_futura}`
+    return `${descricao}. Atualmente faz ${temperatura}<br> Para as próximas horas, o clima ${ocorrencia} ${descricao_futura}.`
+}
+
+function getIcone(id) {
+    return `https://openweathermap.org/img/wn/${id}@2x.png`
+}
+
+async function getClimaAtual(apiKey) {
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=pt`
+    const response = await fetch(url)
+    if (!response.ok) throw new Error("Erro ao consultar clima atual")
+    return await response.json()
+}
+
+async function getClimaFuturo(apiKey) {
+    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=pt&cnt=1`
+    const response = await fetch(url)
+    if (!response.ok) throw new Error("Erro ao consultar previsão do clima")
+    return await response.json()
+}
+
+function getPalavraAleatória() {
+    const keywords = [
+        "night", "river", "city", "mountain", "sunset", "forest", "ocean", "desert",
+        "stars", "skyline", "mist", "sunrise", "waterfall", "beach", "valley", 
+        "lake", "nebula", "canyon", "aurora", "clouds", "moonlight", "island", 
+        "rain", "snow", "autumn", "spring", "winter", "summer", "galaxy", 
+        "tropical", "village", "landscape", "horizon", "panorama", "reflection", 
+        "wildlife", "waves", "glacier", "volcano", "meadow", "field", "cliff", 
+        "countryside", "path", "garden", "bamboo", "palm trees", "coral reef", 
+        "castle", "bridge", "harbor", "sky", "dusk", "dawn", "highway", "street", 
+        "alley", "tower", "lighthouse", "cave", "temple", "zen", "peaceful", 
+        "majestic", "dreamy", "mystical", "colorful",
+        "minimal", "clean", "abstract", "gradient", "aesthetic", "dark", "light",
+        "blurred", "bokeh", "pastel", "vaporwave", "cyberpunk", "futuristic",
+        "technology", "digital art", "sci-fi", "serene"
+    ]
+    return keywords[Math.floor(Math.random() * keywords.length)]
+}
+
+async function getImagemUrl(key) {
+    console.log('Apifoichamada')
+    const palavra = getPalavraAleatória()
+
+    const url = `https://api.unsplash.com/photos/random?query=${palavra}&orientation=landscape&client_id=${key}`
+    
+    const resposta = await fetch(url);
+    if (!resposta.ok) throw new Error(`Erro na requisição: ${resposta.status}`)
+    
+    const dados = await resposta.json()
+    const imagemUrl = dados.urls?.regular
+
+    return imagemUrl
+}
+
+function setWallpaperbyURL(url_imagem) {
+    wallpaperFundo.style.background = `url('${url_imagem}') no-repeat center/cover`
+    localStorage.setItem("imagemUnsplash", url_imagem)
 }
 
 // Definição das váriavies utilitárias de dados para o script
@@ -57,9 +117,13 @@ const relogio = document.getElementById('hora')
 const dia = document.getElementById('dia')  
 const saudacao_campo = document.getElementById("salute")
 const clima_campo = document.getElementById("clima")
+const icone = document.getElementById('icone')
+const temp = document.getElementById('temp')
+const wallpaperFundo = document.getElementById('main');
 
 //Chaves de API
 const openWeatherKey = "c48d97cd1032cbacf0f20cc5292a985c"
+const unsplashKey = 'd0jLuZNi4lsVcYgvT43daJAVz4zWoKGgEky870rKuSk'
 
 //Outras
 const lat = '-27.9499376'
@@ -110,7 +174,8 @@ function processarMinuto() {
 async function processarHora() {
     atualizaData()
     atualizarSaudacao()
-    await atualizarClima()
+    // await atualizarClima()
+    await atualizarWallpaper()
 }
 
 function verificarHoraStorage() {
@@ -151,18 +216,19 @@ function atualizarSaudacao() {
 
     
     if (horas >= 6 && horas <= 12)  {
-        saudacao = `Bom dia, ${user_name}`;
+        saudacao = `Bom dia, ${user_name}`
     }
     else if (horas >= 13 && horas <= 18)  {
-        saudacao = `Boa tarde, ${user_name}`;
+        saudacao = `Boa tarde, ${user_name}`
     }
     else if ((horas >= 19 && horas <= 23) || (horas >= 0 && horas <= 5)) {
-        saudacao = `Boa noite, ${user_name}`;
+        saudacao = `Boa noite, ${user_name}`
     }
 
     saudacao_campo.innerText = saudacao
 }
 
+//Função para atualizar o clima
 async function atualizarClima() {
     const clima_atual = await getClimaAtual(openWeatherKey)
     const clima_futuro = await getClimaFuturo(openWeatherKey)
@@ -172,24 +238,37 @@ async function atualizarClima() {
     const temperatura_atual = clima_atual.main.temp
     const id_icone_atual = clima_atual.weather[0].icon
     const descricao_atual = clima_atual.weather[0].description
-    const descricao_futura = clima_futuro.list[0].main.description // BUG AQUI!!
+    const descricao_futura = clima_futuro.list[0].weather[0].description 
 
     const text = formatarClima(temperatura_atual, descricao_atual, descricao_futura)
+    const temperatura = formatarTemperatura(temperatura_atual)
+    const link_icone = getIcone(id_icone_atual)
 
     clima_campo.innerHTML = text
-    
+    temp.innerText = temperatura
+    icone.src = link_icone 
 }
 
-async function getClimaAtual(apiKey) {
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=pt`
-    const response = await fetch(url)
-    if (!response.ok) throw new Error("Erro ao consultar clima atual")
-    return await response.json()
+//Função para atualizar o wallpaper
+async function atualizarWallpaper() {
+    const executar = verificarHoraStorage()
+    const url_armazenada = localStorage.getItem("imagemUnsplash")
+
+    if(executar) {
+        await requisiçãoWallpaper()
+    } 
+    else {
+        if(url_armazenada) {
+            setWallpaperbyURL(url_armazenada)
+        }
+        else {
+            await requisiçãoWallpaper()
+        }
+    }
 }
 
-async function getClimaFuturo(apiKey) {
-    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=pt&cnt=1`
-    const response = await fetch(url)
-    if (!response.ok) throw new Error("Erro ao consultar previsão do clima")
-    return await response.json()
+async function requisiçãoWallpaper() {
+    const url_imagem = await getImagemUrl(unsplashKey)
+    if(!url_imagem) {return}
+    setWallpaperbyURL(url_imagem)
 }
