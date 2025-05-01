@@ -5,8 +5,15 @@ addEventListener('DOMContentLoaded', () => {
 
 //Definição das funções utiliátrias
 function incrementaDadoHora(chave, valor) {
-    dados_horario[chave] = valor
+    dados_horario[chave] = String(valor)
 }
+
+function incrementaDadoWallpaper(url, palavra, hora) {
+    dados_wallpaper[hora] = {
+      url: url,
+      palavra: palavra
+    };
+  }
 
 function incrementaDadoData(chave, valor) {
     dados_data[chave] = valor
@@ -87,7 +94,6 @@ function getPalavraAleatória() {
 }
 
 async function getImagemUrl(key) {
-    console.log('Apifoichamada')
     const palavra = getPalavraAleatória()
 
     const url = `https://api.unsplash.com/photos/random?query=${palavra}&orientation=landscape&client_id=${key}`
@@ -98,17 +104,34 @@ async function getImagemUrl(key) {
     const dados = await resposta.json()
     const imagemUrl = dados.urls?.regular
 
+    incrementaDadoWallpaper(url, palavra, dados_horario['hora'])
+
     return imagemUrl
+}
+
+
+function tipoAtualizacaoWalpaper() {
+    const hora_local_storage = localStorage.getItem("ultimaHora")
+    const url_armazenada = localStorage.getItem("imagemUnsplash")
+
+    if(hora_local_storage != dados_horario['hora'] || !url_armazenada) {
+        return true //Precisa de uma imagem nova
+    } else {
+        return false //Não precisa de uma imagem nova
+    }
+
 }
 
 function setWallpaperbyURL(url_imagem) {
     wallpaperFundo.style.background = `url('${url_imagem}') no-repeat center/cover`
+    localStorage.setItem("ultimaHora", dados_horario['hora'])
     localStorage.setItem("imagemUnsplash", url_imagem)
 }
 
 // Definição das váriavies utilitárias de dados para o script
 let dados_horario = {}
 let dados_data = {}
+let dados_wallpaper = {}
 
 //elementos
 const diasDaSemana = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"]
@@ -178,17 +201,6 @@ async function processarHora() {
     await atualizarWallpaper()
 }
 
-function verificarHoraStorage() {
-    const hora_local_storage = localStorage.getItem("ultimaHora")
-
-    if(hora_local_storage != dados_horario['hora']) {
-        localStorage.setItem("ultimaHora", dados_horario['hora'])
-        return true //precisa executar
-    } else {
-        return false //não precisa executar
-    }
-
-}
 
 //Funções para atualizar o relógio da tela
 function atualizaRelogio() {
@@ -208,7 +220,7 @@ function atualizaData() {
 
 //Funções para atualizar a saudação
 function atualizarSaudacao() {
-    if (!(dados_horario.minuto && dados_horario.hora)) return;
+    if (!(dados_horario['minuto'] && dados_horario['hora'])) return;
 
     const horas = dados_horario['hora']
     let saudacao = ''
@@ -251,24 +263,15 @@ async function atualizarClima() {
 
 //Função para atualizar o wallpaper
 async function atualizarWallpaper() {
-    const executar = verificarHoraStorage()
-    const url_armazenada = localStorage.getItem("imagemUnsplash")
+    const imagem_nova = tipoAtualizacaoWalpaper()
+    let url_imagem = ''
 
-    if(executar) {
-        await requisiçãoWallpaper()
+    if(imagem_nova) {
+        url_imagem = await getImagemUrl(unsplashKey)
     } 
     else {
-        if(url_armazenada) {
-            setWallpaperbyURL(url_armazenada)
-        }
-        else {
-            await requisiçãoWallpaper()
-        }
+        url_imagem = localStorage.getItem("imagemUnsplash")
     }
-}
 
-async function requisiçãoWallpaper() {
-    const url_imagem = await getImagemUrl(unsplashKey)
-    if(!url_imagem) {return}
     setWallpaperbyURL(url_imagem)
 }
