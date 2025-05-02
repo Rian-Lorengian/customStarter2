@@ -147,6 +147,7 @@ const wallpaperFundo = document.getElementById('main');
 //Chaves de API
 const openWeatherKey = "c48d97cd1032cbacf0f20cc5292a985c"
 const unsplashKey = 'd0jLuZNi4lsVcYgvT43daJAVz4zWoKGgEky870rKuSk'
+const holidaysKey = 'cRw5Blk4OtiBXPBwLLCn0bIEh1JwcCOA'
 
 //Outras
 const lat = '-27.9499376'
@@ -168,7 +169,9 @@ function getDataAtual() {
     incrementaDadoData('dia_da_semana', diasDaSemana[dados_hora_atual.getDay()])
     incrementaDadoData('dia_do_mes', dados_hora_atual.getDate())
     incrementaDadoData('mes', meses[dados_hora_atual.getMonth()])
+    incrementaDadoData('mes_num', dados_hora_atual.getMonth() + 1)
     incrementaDadoData('ano', dados_hora_atual.getFullYear())
+    incrementaDadoData('data_hoje', dados_hora_atual.toISOString().split('T')[0])
 }
 
 function verificaAtualizacao() {
@@ -199,6 +202,7 @@ async function processarHora() {
     atualizarSaudacao()
     // await atualizarClima()
     await atualizarWallpaper()
+    atualizarFeriado()
 }
 
 
@@ -274,4 +278,54 @@ async function atualizarWallpaper() {
     }
 
     setWallpaperbyURL(url_imagem)
+}
+
+
+//Função para atualizar o feriado
+async function atualizarFeriado() {
+    const buscar_feriado = tipoAtualizacaoFeriado()
+
+    if(buscar_feriado) {
+        // const feriado = await getFeriado(holidaysKey)
+        console.log('Precisa buscar um feriado')
+    }
+    else {
+        console.log('Não precisa buscar um feriado')
+    }
+
+
+}
+
+async function getFeriado(apiKey) {
+    const ano = dados_data['ano']
+    let feriado_hoje = ''
+
+    if(!ano) {return}
+
+    // const data_atual = dados_data['data_hoje']
+    const data_atual = '2025-05-01'
+    
+    const url = `https://api.invertexto.com/v1/holidays/${ano}?token=${apiKey}&state=RS`
+
+    const resposta = await fetch(url)
+    const feriados = await resposta.json()
+
+    feriados.forEach(feriado => {
+        if(feriado.date == data_atual) {
+            feriado_hoje = feriado.name
+        }
+    });
+
+    return feriado_hoje
+}
+
+function tipoAtualizacaoFeriado() {
+    const feriado_armazenado = localStorage.getItem("feriado")
+
+    if(!feriado_armazenado) {
+        return true //Precisa buscar um novo
+    }
+    else {
+        return false //Não precisa buscar um novo
+    }
 }
