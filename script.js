@@ -128,6 +128,64 @@ function setWallpaperbyURL(url_imagem) {
     localStorage.setItem("imagemUnsplash", url_imagem)
 }
 
+
+function verificaDiaNovo() {
+    const dia_atual = dados_data['dia_do_mes']
+    const dia_armazenado = localStorage.getItem("ultimoDia")
+
+    if(dia_atual != dia_armazenado) {
+        localStorage.setItem("ultimoDia", dia_atual)
+        return true
+    }
+    else {
+        return false
+    }
+}
+
+function setFeriadoPorNome(feriado = '') {
+    localStorage.setItem("feriado", feriado)
+    feriado_campo.innerText = feriado
+}
+
+async function getFeriado(apiKey) {
+    const ano = dados_data['ano']
+    let feriado_hoje = ''
+
+    if(!ano) {return}
+
+    const data_atual = dados_data['data_hoje']
+    // const data_atual = '2025-05-01'
+    
+    const url = `https://api.invertexto.com/v1/holidays/${ano}?token=${apiKey}&state=RS`
+
+    const resposta = await fetch(url)
+    const feriados = await resposta.json()
+
+    feriados.forEach(feriado => {
+        if(feriado.date == data_atual) {
+            feriado_hoje = feriado.name
+        }
+    });
+
+    return feriado_hoje
+}
+
+function mostrarLoading(mostrar = false) {
+    if(mostrar) {
+        loading.style.display = "flex"
+    }
+    else {
+        loading.style.display = "none"
+    }
+}
+
+//Listener botões
+function listenerButton() {
+    document.getElementById('barra_hora').addEventListener("click", () => {
+        content.style.display = 'flex'
+    })
+
+}
 // Definição das váriavies utilitárias de dados para o script
 let dados_horario = {}
 let dados_data = {}
@@ -142,7 +200,10 @@ const saudacao_campo = document.getElementById("salute")
 const clima_campo = document.getElementById("clima")
 const icone = document.getElementById('icone')
 const temp = document.getElementById('temp')
-const wallpaperFundo = document.getElementById('main');
+const wallpaperFundo = document.getElementById('main')
+const feriado_campo = document.getElementById('feriado')
+const loading = document.getElementById('loading')
+const content = document.getElementById('content-menu')
 
 //Chaves de API
 const openWeatherKey = "c48d97cd1032cbacf0f20cc5292a985c"
@@ -157,9 +218,16 @@ const lon = '-51.8074435'
 function inicio() {
     const timer = setInterval(() => {verificaAtualizacao()}, 1000)
     getDataAtual()
-    verificaAtualizacao()
-    processarMinuto()
-    processarHora()
+    processarLoading()
+}
+
+async function processarLoading() {
+        mostrarLoading(true)
+        verificaAtualizacao()
+        processarMinuto()
+        await processarHora()
+        listenerButton()
+        mostrarLoading(false)
 }
 
 function getDataAtual() {
@@ -202,7 +270,7 @@ async function processarHora() {
     atualizarSaudacao()
     // await atualizarClima()
     await atualizarWallpaper()
-    atualizarFeriado()
+    await atualizarFeriado()
 }
 
 
@@ -283,49 +351,15 @@ async function atualizarWallpaper() {
 
 //Função para atualizar o feriado
 async function atualizarFeriado() {
-    const buscar_feriado = tipoAtualizacaoFeriado()
+    const dia_novo = verificaDiaNovo()
+    let feriado = ''
 
-    if(buscar_feriado) {
-        // const feriado = await getFeriado(holidaysKey)
-        console.log('Precisa buscar um feriado')
+    if(dia_novo) {
+        feriado = await getFeriado(holidaysKey)
+        setFeriadoPorNome(feriado)
     }
     else {
-        console.log('Não precisa buscar um feriado')
-    }
-
-
-}
-
-async function getFeriado(apiKey) {
-    const ano = dados_data['ano']
-    let feriado_hoje = ''
-
-    if(!ano) {return}
-
-    // const data_atual = dados_data['data_hoje']
-    const data_atual = '2025-05-01'
-    
-    const url = `https://api.invertexto.com/v1/holidays/${ano}?token=${apiKey}&state=RS`
-
-    const resposta = await fetch(url)
-    const feriados = await resposta.json()
-
-    feriados.forEach(feriado => {
-        if(feriado.date == data_atual) {
-            feriado_hoje = feriado.name
-        }
-    });
-
-    return feriado_hoje
-}
-
-function tipoAtualizacaoFeriado() {
-    const feriado_armazenado = localStorage.getItem("feriado")
-
-    if(!feriado_armazenado) {
-        return true //Precisa buscar um novo
-    }
-    else {
-        return false //Não precisa buscar um novo
+        const feriado_armazenado = localStorage.getItem("feriado")
+        setFeriadoPorNome(feriado_armazenado)
     }
 }
