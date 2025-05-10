@@ -104,7 +104,7 @@ async function getImagemUrl(key) {
     const dados = await resposta.json()
     const imagemUrl = dados.urls?.regular
 
-    incrementaDadoWallpaper(url, palavra, dados_horario['hora'])
+    incrementaDadoWallpaper(imagemUrl, palavra, dados_horario['hora'] + dados_horario['minuto'])
 
     return imagemUrl
 }
@@ -179,10 +179,64 @@ function mostrarLoading(mostrar = false) {
     }
 }
 
+async function forceNewWallpaper() {
+    mostrarLoading(true)
+    content.style.display = 'none'
+    localStorage.setItem("ultimaHora", '')
+    await atualizarWallpaper()
+    mostrarLoading(false)
+}
+
+function showWallpaperDate() {
+    // Limpa o conteúdo anterior
+    const modalBox = document.getElementById("modal-box");
+    modalBox.innerHTML = '';
+
+    // Cria os itens com links clicáveis
+    Object.values(dados_wallpaper).forEach((wallpaper) => {
+        const linkItem = document.createElement('div');
+        linkItem.className = 'item-menu';
+        linkItem.innerHTML = `<a href="${wallpaper.url}" target="_blank" style="color: inherit; text-decoration: none;">${wallpaper.palavra}</a>`;
+        modalBox.appendChild(linkItem);
+    });
+
+    // Adiciona o botão de fechar
+    const closeButton = document.createElement('div')
+    closeButton.className = 'item-menu'
+    closeButton.id = 'content-menu-op-close'
+    closeButton.textContent = 'Fechar Menu'
+    closeButton.onclick = () => {
+        information.style.display = 'none'
+        content.style.display = 'flex'
+    };
+    modalBox.appendChild(closeButton)
+
+    // Exibe o modal
+    information.style.display = 'flex'
+    content.style.display = 'none'
+}
+
 //Listener botões
 function listenerButton() {
     document.getElementById('barra_hora').addEventListener("click", () => {
         content.style.display = 'flex'
+    })
+
+    content_menu_op_close.addEventListener("click", () => {
+        content.style.display = 'none'
+        information.style.display = 'none'
+    })
+
+    content_menu_op_1.addEventListener("click", () => {
+        forceNewWallpaper()
+    })
+
+    content_menu_op_2.addEventListener("click", () => {
+        showWallpaperDate()
+    })
+
+    content_menu_op_3.addEventListener("click", () => {
+        processarLoading()
     })
 
 }
@@ -204,6 +258,12 @@ const wallpaperFundo = document.getElementById('main')
 const feriado_campo = document.getElementById('feriado')
 const loading = document.getElementById('loading')
 const content = document.getElementById('content-menu')
+const content_menu_op_close = document.getElementById('content-menu-op-close')
+const content_menu_op_1 = document.getElementById('content-menu-op-1')
+const content_menu_op_2 = document.getElementById('content-menu-op-2')
+const information = document.getElementById('information')
+const modalBox = document.getElementById("modal-box")
+const content_menu_op_3 = document.getElementById('content-menu-op-3')
 
 //Chaves de API
 const openWeatherKey = "c48d97cd1032cbacf0f20cc5292a985c"
