@@ -60,8 +60,16 @@ function getIcone(id) {
     return `https://openweathermap.org/img/wn/${id}@2x.png`
 }
 
-async function getClimaAtual(apiKey) {
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=pt`
+async function getClimaIngles() {
+    const clima_atual = await getClimaAtual(openWeatherKey, 'en')
+    
+    if(!clima_atual) {return}
+
+    incrementaDadoHora('descricao_atual', clima_atual.weather[0].description)
+}
+
+async function getClimaAtual(apiKey, lang = 'pt') {
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=${lang}`
     const response = await fetch(url)
     if (!response.ok) throw new Error("Erro ao consultar clima atual")
     return await response.json()
@@ -74,29 +82,34 @@ async function getClimaFuturo(apiKey) {
     return await response.json()
 }
 
-function getPalavraAleatória() {
-    const keywords = [
-        "night", "river", "city", "mountain", "sunset", "forest", "ocean", "desert",
-        "stars", "skyline", "mist", "sunrise", "waterfall", "beach", "valley", 
-        "lake", "nebula", "canyon", "aurora", "clouds", "moonlight", "island", 
-        "rain", "snow", "autumn", "spring", "winter", "summer", "galaxy", 
-        "tropical", "village", "landscape", "horizon", "panorama", "reflection", 
-        "wildlife", "waves", "glacier", "volcano", "meadow", "field", "cliff", 
-        "countryside", "path", "garden", "bamboo", "palm trees", "coral reef", 
-        "castle", "bridge", "harbor", "sky", "dusk", "dawn", "highway", "street", 
-        "alley", "tower", "lighthouse", "cave", "temple", "zen", "peaceful", 
-        "majestic", "dreamy", "mystical", "colorful",
-        "minimal", "clean", "abstract", "gradient", "aesthetic", "dark", "light",
-        "blurred", "bokeh", "pastel", "vaporwave", "cyberpunk", "futuristic",
-        "technology", "digital art", "sci-fi", "serene"
-    ]
-    return keywords[Math.floor(Math.random() * keywords.length)]
+function getPalavraAleatória() {    
+    const palavrasInglesExtras = ["city", "village", "town", "countryside", "forest", "jungle", "rainforest", "mountains", "hills", "beach", "coast", "seaside", "desert", "island", "lake", "river", "valley", "cliff", "canyon", "castle", "temple", "shrine", "church", "garden", "park", "harbor", "port", "lighthouse", "waterfall", "glacier", "ocean", "bay", "meadow", "plain", "savannah", "tundra", "swamp", "marsh", "cave", "hot spring", "volcano", "village market", "old street", "historic town", "skyline", "bridge", "road", "highway", "train station", "airport", "pier", "boardwalk", "fishing village", "ruins", "fortress", "monastery", "observatory", "windmill", "field", "farm", "orchard", "vineyard", "sunset view", "sunrise spot", "snowy landscape", "autumn forest", "spring bloom", "winter wonderland", "summer coast"];
+
+    return palavrasInglesExtras[Math.floor(Math.random() * palavrasInglesExtras.length)]
+}
+
+function montarPrompt() {
+    const hora = parseInt(dados_horario['hora'])
+    
+    let parteDoDia = ''
+    if (hora >= 5 && hora < 12) {
+        parteDoDia = 'morning'
+    } else if (hora >= 12 && hora < 18) {
+        parteDoDia = 'afternoon'
+    } else {
+        parteDoDia = 'night'
+    }
+
+    const descricao = dados_horario['descricao_atual']
+    const palavraAleatoria = getPalavraAleatória()
+    return `${palavraAleatoria} ${parteDoDia} ${descricao}`
 }
 
 async function getImagemUrl(key) {
-    const palavra = getPalavraAleatória()
+    const palavra = montarPrompt()
+    console.log(palavra)
 
-    const url = `https://api.unsplash.com/photos/random?query=${palavra}&orientation=landscape&client_id=${key}`
+    const url = `https://api.unsplash.com/photos/random?query=${encodeURIComponent(palavra)}&orientation=landscape&client_id=${key}`
     
     const resposta = await fetch(url);
     if (!resposta.ok) throw new Error(`Erro na requisição: ${resposta.status}`)
@@ -192,11 +205,15 @@ function showWallpaperDate() {
     const modalBox = document.getElementById("modal-box");
     modalBox.innerHTML = '';
 
-    // Cria os itens com links clicáveis
+    // Cria os itens clicáveis que copiam a URL
     Object.values(dados_wallpaper).forEach((wallpaper) => {
         const linkItem = document.createElement('div');
         linkItem.className = 'item-menu';
-        linkItem.innerHTML = `<a href="${wallpaper.url}" target="_blank" style="color: inherit; text-decoration: none;">${wallpaper.palavra}</a>`;
+        linkItem.textContent = wallpaper.palavra;
+        linkItem.style.cursor = 'pointer';
+        linkItem.onclick = async () => {
+            await navigator.clipboard.writeText(wallpaper.url);
+        };
         modalBox.appendChild(linkItem);
     });
 
@@ -214,6 +231,14 @@ function showWallpaperDate() {
     // Exibe o modal
     information.style.display = 'flex'
     content.style.display = 'none'
+}
+
+function limparStorage() {
+    localStorage.setItem("feriado", '')
+    localStorage.setItem("ultimoDia", '')
+    localStorage.setItem("imagemUnsplash", '')
+    localStorage.setItem("ultimaHora", '')
+
 }
 
 //Listener botões
@@ -236,6 +261,11 @@ function listenerButton() {
     })
 
     content_menu_op_3.addEventListener("click", () => {
+        processarLoading()
+    })
+
+    content_menu_op_4.addEventListener("click", () => {
+        limparStorage()
         processarLoading()
     })
 
@@ -264,6 +294,7 @@ const content_menu_op_2 = document.getElementById('content-menu-op-2')
 const information = document.getElementById('information')
 const modalBox = document.getElementById("modal-box")
 const content_menu_op_3 = document.getElementById('content-menu-op-3')
+const content_menu_op_4 = document.getElementById('content-menu-op-4')
 
 //Chaves de API
 const openWeatherKey = "c48d97cd1032cbacf0f20cc5292a985c"
@@ -328,7 +359,7 @@ function processarMinuto() {
 async function processarHora() {
     atualizaData()
     atualizarSaudacao()
-    // await atualizarClima()
+    await atualizarClima()
     await atualizarWallpaper()
     await atualizarFeriado()
 }
@@ -374,6 +405,7 @@ function atualizarSaudacao() {
 
 //Função para atualizar o clima
 async function atualizarClima() {
+    await getClimaIngles()
     const clima_atual = await getClimaAtual(openWeatherKey)
     const clima_futuro = await getClimaFuturo(openWeatherKey)
 
