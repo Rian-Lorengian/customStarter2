@@ -8,11 +8,13 @@ function incrementaDadoHora(chave, valor) {
     dados_horario[chave] = String(valor)
 }
 
-function incrementaDadoWallpaper(url, palavra, hora) {
-    dados_wallpaper[hora] = {
+function incrementaDadoWallpaper(id, url, palavra, hora) {
+    dados_wallpaper[id] = {
       url: url,
-      palavra: palavra
-    };
+      palavra: palavra,
+      hora: hora
+    }
+    wallpaper_id += 1
   }
 
 function incrementaDadoData(chave, valor) {
@@ -60,14 +62,6 @@ function getIcone(id) {
     return `https://openweathermap.org/img/wn/${id}@2x.png`
 }
 
-async function getClimaIngles() {
-    const clima_atual = await getClimaAtual(openWeatherKey, 'en')
-    
-    if(!clima_atual) {return}
-
-    incrementaDadoHora('descricao_atual', clima_atual.weather[0].description)
-}
-
 async function getClimaAtual(apiKey, lang = 'pt') {
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=${lang}`
     const response = await fetch(url)
@@ -83,31 +77,44 @@ async function getClimaFuturo(apiKey) {
 }
 
 function getPalavraAleatória() {    
-    const palavrasInglesExtras = ["city", "village", "town", "countryside", "forest", "jungle", "rainforest", "mountains", "hills", "beach", "coast", "seaside", "desert", "island", "lake", "river", "valley", "cliff", "canyon", "castle", "temple", "shrine", "church", "garden", "park", "harbor", "port", "lighthouse", "waterfall", "glacier", "ocean", "bay", "meadow", "plain", "savannah", "tundra", "swamp", "marsh", "cave", "hot spring", "volcano", "village market", "old street", "historic town", "skyline", "bridge", "road", "highway", "train station", "airport", "pier", "boardwalk", "fishing village", "ruins", "fortress", "monastery", "observatory", "windmill", "field", "farm", "orchard", "vineyard", "sunset view", "sunrise spot", "snowy landscape", "autumn forest", "spring bloom", "winter wonderland", "summer coast"];
+    const palavrasInglesExtras = ["city", "landscape", "street"]
 
     return palavrasInglesExtras[Math.floor(Math.random() * palavrasInglesExtras.length)]
 }
 
-function montarPrompt() {
-    const hora = parseInt(dados_horario['hora'])
-    
-    let parteDoDia = ''
-    if (hora >= 5 && hora < 12) {
-        parteDoDia = 'morning'
-    } else if (hora >= 12 && hora < 18) {
-        parteDoDia = 'afternoon'
-    } else {
-        parteDoDia = 'night'
-    }
+function getParteDia() {
+    const hora = parseInt(dados_horario['hora']);
 
-    const descricao = dados_horario['descricao_atual']
-    const palavraAleatoria = getPalavraAleatória()
-    return `${palavraAleatoria} ${parteDoDia} ${descricao}`
+    if (hora >= 5 && hora < 8) {
+        return 'sunrise';
+    } else if (hora >= 8 && hora < 17) {
+        return 'day';
+    } else if (hora >= 17 && hora < 19) {
+        return 'sunset';
+    } else {
+        return 'night';
+    }
+}
+
+
+function montarPrompt() {
+    const iconeId = parseInt(dados_horario['id_icone_api']);
+    const temperatura = parseInt(dados_horario['temperatura_atual']);
+    const parteDoDia = getParteDia();
+    const palavra = getPalavraAleatória();
+
+    const tags = [];
+
+    if (iconeId > 5) tags.push('rainy');
+    if (temperatura <= 10) tags.push('cold');
+
+    const prompt = `${tags.join(' ')} ${parteDoDia} ${palavra}`.trim();
+
+    return prompt
 }
 
 async function getImagemUrl(key) {
     const palavra = montarPrompt()
-    console.log(palavra)
 
     const url = `https://api.unsplash.com/photos/random?query=${encodeURIComponent(palavra)}&orientation=landscape&client_id=${key}`
     
@@ -117,7 +124,7 @@ async function getImagemUrl(key) {
     const dados = await resposta.json()
     const imagemUrl = dados.urls?.regular
 
-    incrementaDadoWallpaper(imagemUrl, palavra, dados_horario['hora'] + dados_horario['minuto'])
+    incrementaDadoWallpaper(wallpaper_id, url, palavra, formatarHorario(dados_horario['hora'], dados_horario['minuto']))
 
     return imagemUrl
 }
@@ -274,6 +281,7 @@ function listenerButton() {
 let dados_horario = {}
 let dados_data = {}
 let dados_wallpaper = {}
+let wallpaper_id = 1
 
 //elementos
 const diasDaSemana = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"]
@@ -354,6 +362,7 @@ function verificaAtualizacao() {
 //Chamamento das funções de hora e minuto
 function processarMinuto() {
     atualizaRelogio()
+    atualizarProgresso()
 }
 
 async function processarHora() {
@@ -405,7 +414,6 @@ function atualizarSaudacao() {
 
 //Função para atualizar o clima
 async function atualizarClima() {
-    await getClimaIngles()
     const clima_atual = await getClimaAtual(openWeatherKey)
     const clima_futuro = await getClimaFuturo(openWeatherKey)
 
@@ -419,6 +427,9 @@ async function atualizarClima() {
     const text = formatarClima(temperatura_atual, descricao_atual, descricao_futura)
     const temperatura = formatarTemperatura(temperatura_atual)
     const link_icone = getIcone(id_icone_atual)
+
+    incrementaDadoHora('id_icone_api', id_icone_atual.slice(0, 2))
+    incrementaDadoData('temperatura_atual', temperatura_atual)
 
     clima_campo.innerHTML = text
     temp.innerText = temperatura
@@ -454,4 +465,90 @@ async function atualizarFeriado() {
         const feriado_armazenado = localStorage.getItem("feriado")
         setFeriadoPorNome(feriado_armazenado)
     }
+}
+
+function atualizarProgresso() {
+    const now = new Date();
+
+    const calcularProgresso = (inicio, fim) => ((now - inicio) / (fim - inicio)) * 100;
+
+    const getInicioEFimDaHora = () => {
+        const inicio = new Date(now);
+        inicio.setMinutes(0, 0, 0);
+        const fim = new Date(inicio);
+        fim.setHours(inicio.getHours() + 1);
+        return [inicio, fim];
+    };
+
+    const getInicioEFimDoDia = () => {
+        const inicio = new Date(now);
+        inicio.setHours(0, 0, 0, 0);
+        const fim = new Date(now);
+        fim.setHours(23, 59, 59, 999);
+        return [inicio, fim];
+    };
+
+    const getInicioEFimDaSemana = () => {
+        const inicio = new Date(now);
+        const diaDaSemana = now.getDay(); // 0 = domingo ... 6 = sábado
+        const diasDesdeSabado = (diaDaSemana + 1) % 7;
+        inicio.setDate(now.getDate() - diasDesdeSabado);
+        inicio.setHours(0, 0, 0, 0);
+
+        const fim = new Date(inicio);
+        fim.setDate(inicio.getDate() + 6);
+        fim.setHours(23, 59, 59, 999);
+        return [inicio, fim];
+    };
+
+    const getInicioEFimDoAno = () => {
+        const inicio = new Date(now.getFullYear(), 0, 1);
+        const fim = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        return [inicio, fim];
+    };
+
+    const [inicioHora, fimHora] = getInicioEFimDaHora();
+    const [inicioDia, fimDia] = getInicioEFimDoDia();
+    const [inicioSemana, fimSemana] = getInicioEFimDaSemana();
+    const [inicioAno, fimAno] = getInicioEFimDoAno();
+
+    const progressoHora = calcularProgresso(inicioHora, fimHora);
+    const progressoDia = calcularProgresso(inicioDia, fimDia);
+    const progressoSemana = calcularProgresso(inicioSemana, fimSemana);
+    const progressoAno = calcularProgresso(inicioAno, fimAno);
+
+    const inicializarElementosHTML = () => {
+        if (document.getElementById("hour-text")) return;
+
+        document.getElementById("low").innerHTML = `
+            <div class="progress-container" id="barra_hora">
+                <div class="progress-text" id="hour-text"></div>
+                <div class="progress-bar"></div>
+            </div>
+            <div class="progress-container" id="barra_dia">
+                <div class="progress-text" id="day-text"></div>
+                <div class="progress-bar"></div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-text" id="week-text"></div>
+                <div class="progress-bar"></div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-text" id="year-text"></div>
+                <div class="progress-bar"></div>
+            </div>
+        `;
+    };
+
+    const atualizarTexto = (id, label, valor) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = `${label} ${Math.round(valor)}%`;
+    };
+
+    inicializarElementosHTML();
+
+    atualizarTexto("hour-text", "HORA", progressoHora);
+    atualizarTexto("day-text", "DIA", progressoDia);
+    atualizarTexto("week-text", "SEMANA", progressoSemana);
+    atualizarTexto("year-text", "ANO", progressoAno);
 }
